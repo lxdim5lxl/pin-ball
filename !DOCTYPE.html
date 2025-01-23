@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>탱탱볼 게임</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #333;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #444;
+            overflow: hidden;
+        }
+
+        .ball {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #00f;
+            border-radius: 50%;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #ff0;
+            border-radius: 10px;
+        }
+
+        .goal {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: #0f0;
+            border-radius: 50%;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #start-btn {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background-color: #00f;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="goal" id="goal"></div>
+        <div class="obstacle" id="obstacle1" style="top: 200px; left: 300px; transform: rotate(0deg);"></div> <!-- 0도 -->
+        <div class="obstacle" id="obstacle2" style="top: 400px; left: 500px; transform: rotate(45deg);"></div> <!-- 45도 -->
+        <div class="obstacle" id="obstacle3" style="top: 600px; left: 700px; transform: rotate(90deg);"></div> <!-- 90도 -->
+    </div>
+    <button id="start-btn">게임 시작</button>
+
+    <script>
+        const gameContainer = document.getElementById("game-container");
+        const goal = document.getElementById("goal");
+        const startBtn = document.getElementById("start-btn");
+        const obstacles = [
+            document.getElementById("obstacle1"),
+            document.getElementById("obstacle2"),
+            document.getElementById("obstacle3")
+        ];
+
+        let balls = []; // 공들을 저장할 배열
+        let isGameRunning = false;
+
+        // 공 생성 함수
+        function createBall(x, y) {
+            const ball = document.createElement("div");
+            ball.classList.add("ball");
+            ball.style.left = `${x}px`;
+            ball.style.top = `${y}px`;
+            gameContainer.appendChild(ball);
+            balls.push(ball);
+        }
+
+        // 공이 목표에 도달했는지 체크하는 함수
+        function checkGoal(ball) {
+            const ballRect = ball.getBoundingClientRect();
+            const goalRect = goal.getBoundingClientRect();
+
+            return !(ballRect.right < goalRect.left || ballRect.left > goalRect.right || ballRect.bottom < goalRect.top || ballRect.top > goalRect.bottom);
+        }
+
+        // 장애물에 맞춰 공의 움직임을 탱탱볼처럼 처리
+        function handleCollision(ball, obstacle) {
+            const ballRect = ball.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+            const angle = parseFloat(obstacle.style.transform.replace('rotate(', '').replace('deg)', ''));
+            let dx = 0;
+            let dy = 2; // 중력
+
+            // 장애물에 충돌하면 공이 튕기게 됨
+            if (ballRect.bottom >= obstacleRect.top && ballRect.top <= obstacleRect.bottom &&
+                ballRect.right >= obstacleRect.left && ballRect.left <= obstacleRect.right) {
+                
+                const angleInRadians = angle * Math.PI / 180; // 각도를 라디안으로 변환
+                // 각도에 맞게 공의 이동 방향을 수정
+                dx = Math.sin(angleInRadians) * 4; // 공이 X축으로 이동하는 양
+                dy = -Math.cos(angleInRadians) * 4; // 공이 Y축으로 이동하는 양
+            }
+
+            return { dx, dy };
+        }
+
+        // 공의 위치 업데이트 함수 (중력과 장애물 효과 포함)
+        function updateBall(ball) {
+            const ballRect = ball.getBoundingClientRect();
+            let dx = 0;
+            let dy = 2; // 기본 중력
+
+            // 장애물과의 충돌 처리
+            obstacles.forEach(obstacle => {
+                const { dx: newDx, dy: newDy } = handleCollision(ball, obstacle);
+                dx = newDx || dx;
+                dy = newDy || dy;
+            });
+
+            // 공의 위치 업데이트
+            ball.style.left = `${ballRect.left + dx}px`;
+            ball.style.top = `${ballRect.top + dy}px`;
+
+            // 목표에 도달했는지 체크
+            if (checkGoal(ball)) {
+                alert("게임 종료! 공이 목표에 도달했습니다.");
+                isGameRunning = false;
+            }
+        }
+
+        // 게임 시작 함수
+        function startGame() {
+            if (isGameRunning) return; // 게임이 이미 실행 중이면 새로 시작하지 않음
+            isGameRunning = true;
+
+            // 3개의 공 생성 (예시)
+            createBall(100, 0);
+            createBall(200, 0);
+            createBall(300, 0);
+
+            // 공 업데이트 반복
+            const gameLoop = setInterval(() => {
+                if (!isGameRunning) {
+                    clearInterval(gameLoop);
+                    return;
+                }
+
+                balls.forEach(ball => {
+                    updateBall(ball);
+                });
+            }, 20);
+        }
+
+        startBtn.addEventListener("click", startGame);
+    </script>
+</body>
+</html>
